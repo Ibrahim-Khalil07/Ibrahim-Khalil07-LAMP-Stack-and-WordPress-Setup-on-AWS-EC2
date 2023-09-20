@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+
+sudo yum update -y
+
+# Installing Software
+
+sudo yum install mariadb-server.x86_64 -y
+sudo yum install httpd -y
+sudo amazon-linux-extras install php7.4
+
+
+sudo systemctl enable mariadb 
+sudo systemctl start mariadb 
+sudo systemctl start httpd
+sudo systemctl enable httpd
+sudo systemctl enable php-fpm 
+sudo systemctl start php-fpm 
+
+sudo mkdir /var/www/
+sudo chown ec2-user:ec2-user /var/www/
+cd /var/www/
+wget http://wordpress.org/latest.tar.gz
+tar -xvf latest.tar.gz
+rm latest.tar.gz
+cd /var/
+
+sudo chown -R apache:apache /var/www/
+sudo mysql_install_db
+
+cd /tmp/
+# Apache configuration for the server block (Virtual Host)
+sudo echo "<VirtualHost *:80>
+    ServerAdmin webmaster@yourdomain.com
+    DocumentRoot /var/www/wordpress
+    ServerName wordpress
+    ServerAlias wordpress
+
+    ErrorLog /var/log/httpd/wordpress-error.log
+    CustomLog /var/log/httpd/wordpress-access.log combined
+
+    <Directory /var/www/wordpress>
+        AllowOverride All
+        Require all granted
+    </Directory>
+</VirtualHost>" > /etc/httpd/conf.d/wordpress.conf
+
+sudo chown root:root wordpress.conf
+sudo chmod 644 wordpress.conf
+sudo mv wordpress.conf /etc/httpd/conf.d/
+
+# All services are restarted to apply the configuration changes.
+
+sudo service httpd restart
+sudo service php-fpm restart
+sudo service mariadb restart
